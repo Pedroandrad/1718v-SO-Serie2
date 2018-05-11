@@ -25,6 +25,12 @@ static
 ULONG NumberOfThreads;
 
 //
+// Sentinel of the list with every Thread being used
+//
+static
+LIST_ENTRY AliveThreadList;
+
+//
 // The sentinel of the circular list linking the user threads that are
 // currently schedulable. The next thread to run is retrieved from the
 // head of this list.
@@ -532,3 +538,13 @@ VOID CleanupThread (PUTHREAD Thread) {
 
 
 #endif
+
+//
+//  handle, o nome, o estado e a taxa de ocupação do stack. 
+//
+VOID UtDump() {
+	AliveThreadList.Re
+	PUTHREAD curr = L
+	for (int i = 0; i < NumberOfThreads; i++, )
+		printf("Thread Handle: %s, Name: %s, Estado: %s, Taxa Ocupacao Stack: %%d", "", );
+}
