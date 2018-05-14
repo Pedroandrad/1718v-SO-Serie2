@@ -42,8 +42,8 @@ DWORD _tmain( DWORD argc, PTCHAR argv[] ) {
 	long numbers[MAX_WORK] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	UtInit();
 
-	HANDLE client = UtCreate(Client, numbers);
-	HANDLE server = UtCreate(Server, NULL);
+	HANDLE client = UtCreate(Client, numbers, NULL, "Client");
+	HANDLE server = UtCreate(Server, NULL, NULL, "Server");
 
 	UtRun();
 

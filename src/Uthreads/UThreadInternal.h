@@ -14,8 +14,7 @@
 
 #include <Windows.h>
 #include "UThread.h"
-#include "
-.h"
+#include "List.h"
 #include <assert.h>
 //
 // The data structure representing the layout of a thread's execution context
@@ -57,7 +56,7 @@ typedef struct _UTHREAD_CONTEXT {
 typedef struct _UTHREAD {
 	PUTHREAD_CONTEXT ThreadContext;
 	LIST_ENTRY       Link;
-	UT_FUNCTION      Function; 
+	UT_FUNCTION      Function;
 	UT_ARGUMENT      Argument;
 	PUCHAR           Stack;
 	char*			 Name;
@@ -68,7 +67,7 @@ typedef struct _UTHREAD {
 //
 // The fixed stack size of a user thread.
 //
-#define STACK_SIZE (16 * 4096)
+#define STACK_SIZE (100 * 4096)
 
 #define READY   0
 #define RUNNING 1

@@ -88,20 +88,6 @@ FORCEINLINE VOID InsertTailList (PLIST_ENTRY ListHead, PLIST_ENTRY Entry)
 	Blink->Flink = Entry;
 	ListHead->Blink = Entry;
 }
-// Inserts range of entries at the tail of the list.
-// The range is a circular linked list with sentinel node.
-//
-FORCEINLINE VOID InsertRangeTailList(PLIST_ENTRY ListHead, PLIST_ENTRY Range)
-{
-	if (IsListEmpty(Range)) return;
-
-	PLIST_ENTRY Blink;
-	Blink = ListHead->Blink;
-	Range->Blink->Flink = ListHead;
-	Range->Flink->Blink = Blink;
-	Blink->Flink = Range->Flink;
-	ListHead->Blink = Range->Blink;
-}
 
 // Inserts the specified entry at the head of the list.
 //

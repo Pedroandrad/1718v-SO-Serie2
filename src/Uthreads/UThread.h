@@ -54,7 +54,7 @@ VOID UtRun ();
 // at the end of the ready queue.
 //
 UTHREAD_API
-HANDLE UtCreate (UT_FUNCTION Function, UT_ARGUMENT Argument);
+HANDLE UtCreate(UT_FUNCTION Function, UT_ARGUMENT Argument, size_t Stack_Size, const char* Thread_Name);
 
 //
 // Terminates the execution of the currently running thread. All associated
@@ -92,3 +92,5 @@ VOID UtActivate (HANDLE ThreadHandle);
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
+VOID UtDump();

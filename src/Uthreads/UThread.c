@@ -12,6 +12,7 @@
 
 #include <crtdbg.h>
 #include "UThreadInternal.h"
+#include "LinkedList.h"
 
 //////////////////////////////////////
 //
@@ -31,6 +32,12 @@ ULONG NumberOfThreads;
 //
 static
 LIST_ENTRY ReadyQueue;
+
+//
+// Sentinel of the list with every Thread being used
+//
+static
+node_t AliveThreadList;
 
 //
 // The currently executing thread.
@@ -113,8 +120,11 @@ PUTHREAD ExtractNextReadyThread () {
 static
 FORCEINLINE
 VOID Schedule () {
+	UtDump();
 	PUTHREAD NextThread;
     NextThread = ExtractNextReadyThread();
+	RunningThread->Status = READY;
+	NextThread->Status = RUNNING;
 	ContextSwitch(RunningThread, NextThread);
 }
 
@@ -129,6 +139,7 @@ VOID Schedule () {
 //
 VOID UtInit() {
 	InitializeListHead(&ReadyQueue);
+	NodeInitializeListHead(&AliveThreadList);
 }
 
 //
@@ -197,6 +208,7 @@ VOID UtExit () {
 //
 VOID UtYield () {
 	if (!IsListEmpty(&ReadyQueue)) {
+		RunningThread->Status = READY;
 		InsertTailList(&ReadyQueue, &RunningThread->Link);
 		Schedule();
 	}
@@ -213,6 +225,7 @@ HANDLE UtSelf () {
 // Halts the execution of the current user thread.
 //
 VOID UtDeactivate() {
+	RunningThread->Status = BLOCKED;
 	Schedule();
 }
 
@@ -222,6 +235,7 @@ VOID UtDeactivate() {
 // becomes eligible to run.
 //
 VOID UtActivate (HANDLE ThreadHandle) {
+	((PUTHREAD)ThreadHandle)->Status = READY;
 	InsertTailList(&ReadyQueue, &((PUTHREAD)ThreadHandle)->Link);
 }
 
@@ -248,7 +262,7 @@ VOID InternalStart () {
 // Creates a user thread to run the specified function. The thread is placed
 // at the end of the ready queue.
 //
-HANDLE UtCreate (UT_FUNCTION Function, UT_ARGUMENT Argument) {
+HANDLE UtCreate(UT_FUNCTION Function, UT_ARGUMENT Argument, size_t Stack_Size, const char* Thread_Name) {
 	PUTHREAD Thread;
 	
 	//
@@ -258,6 +272,8 @@ HANDLE UtCreate (UT_FUNCTION Function, UT_ARGUMENT Argument) {
 	Thread->Stack = (PUCHAR) malloc(STACK_SIZE);
 	_ASSERTE(Thread != NULL && Thread->Stack != NULL);
 
+
+	Thread->Name = Thread_Name;
 	//
 	// Zero the stack for emotional confort.
 	//
@@ -318,6 +334,9 @@ HANDLE UtCreate (UT_FUNCTION Function, UT_ARGUMENT Argument) {
 	// Ready the thread.
 	//
 	NumberOfThreads += 1;
+	Pnode_t newNode = (Pnode_t) malloc(sizeof(node_t));
+	newNode->uThread = Thread;
+	NodeInsertTailList(&AliveThreadList, newNode);
 	UtActivate((HANDLE)Thread);
 	
 	return (HANDLE)Thread;
@@ -518,3 +537,34 @@ VOID CleanupThread (PUTHREAD Thread) {
 
 
 #endif
+
+//
+//  handle, o nome, o estado e a taxa de ocupacao do stack. 
+//
+/*
+VOID UtDump() {
+	PLIST_ENTRY head = &AliveThreadList;
+	for (PLIST_ENTRY curr = AliveThreadList.Flink; curr != &AliveThreadList; curr = curr->Flink)
+	{
+		char* name = CONTAINING_RECORD(curr, UTHREAD, Link)->Name;
+		int status = CONTAINING_RECORD(curr, UTHREAD, Link)->Status;
+		printf("Thread Handle: %s, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", "handle", name, status, "stack");
+	}
+	printf("\n");
+}
+*/
+
+VOID UtDump() {
+	Pnode_t head = &AliveThreadList;
+	for (Pnode_t curr = AliveThreadList.Fnode; curr != &AliveThreadList; curr = curr->Fnode)
+	{
+		char* name = curr->uThread->Name;
+		int status = curr->uThread->Status;
+		char * statusString = "";
+		if (status == READY) statusString = "READY";
+		else if (status == RUNNING) statusString = "RUNNING";
+		else if (status == BLOCKED) statusString = "BLOCKED";
+		printf("Thread Handle: %s, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", "/", name, statusString, "/");
+	}
+	printf("\n");
+}

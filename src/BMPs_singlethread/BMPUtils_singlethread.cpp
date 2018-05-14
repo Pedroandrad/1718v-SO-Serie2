@@ -129,7 +129,7 @@ BOOL BMP_GetFlipsOfRefFile(LPCSTR filePath, LPVOID _ctx) {
 		PRES_NODE newNode = (PRES_NODE)malloc(sizeof(RES_NODE));
 		newNode->filename = _strdup(filePath);
 		InitializeListHead(&newNode->files);
-		InsertRangeTailList(&newNode->files, &ctx.fileMatchingList);
+		//InsertRangeTailList(&newNode->files, &ctx.fileMatchingList);
 		InsertTailList(global->resultList, &newNode->link);
 	}
 terminate:
