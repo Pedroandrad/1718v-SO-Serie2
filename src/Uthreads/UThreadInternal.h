@@ -59,7 +59,7 @@ typedef struct _UTHREAD {
 	UT_FUNCTION      Function;
 	UT_ARGUMENT      Argument;
 	PUCHAR           Stack;
-	char*			 Name;
+	const char*		 Name;
 	size_t			 Stack_Size;
 	int				 Status;
 } UTHREAD, *PUTHREAD;

@@ -89,8 +89,17 @@ VOID UtDeactivate ();
 UTHREAD_API
 VOID UtActivate (HANDLE ThreadHandle);
 
+//
+//  prints the handle, o nome, o estado e a taxa de ocupacao do stack. 
+//
+UTHREAD_API
+VOID UtDump();
+
+//
+// Espera passivamente pela terminação de todas as threads passados no array handle.
+//
+BOOL UtMultJoin(HANDLE handle[], int size);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
-
-VOID UtDump();

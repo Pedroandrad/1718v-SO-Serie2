@@ -24,6 +24,18 @@
     <ClCompile Include="LinkedList.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CountDownLatch.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Semaphore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Event.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Mutex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UThread.h">
@@ -32,10 +44,13 @@
     <ClInclude Include="UThreadInternal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LinkedList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="USynch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LinkedList.h">
+    <ClInclude Include="WaitBlock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -111,7 +111,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CountDownLatch.c" />
+    <ClCompile Include="Event.c" />
     <ClCompile Include="LinkedList.c" />
+    <ClCompile Include="Mutex.c" />
+    <ClCompile Include="Semaphore.c" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="UThread.c" />
   </ItemGroup>
@@ -120,6 +124,7 @@
     <ClInclude Include="USynch.h" />
     <ClInclude Include="UThread.h" />
     <ClInclude Include="UThreadInternal.h" />
+    <ClInclude Include="WaitBlock.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

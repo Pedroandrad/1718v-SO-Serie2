@@ -120,10 +120,8 @@ PUTHREAD ExtractNextReadyThread () {
 static
 FORCEINLINE
 VOID Schedule () {
-	UtDump();
 	PUTHREAD NextThread;
     NextThread = ExtractNextReadyThread();
-	RunningThread->Status = READY;
 	NextThread->Status = RUNNING;
 	ContextSwitch(RunningThread, NextThread);
 }
@@ -271,7 +269,6 @@ HANDLE UtCreate(UT_FUNCTION Function, UT_ARGUMENT Argument, size_t Stack_Size, c
 	Thread = (PUTHREAD) malloc(sizeof (UTHREAD));
 	Thread->Stack = (PUCHAR) malloc(STACK_SIZE);
 	_ASSERTE(Thread != NULL && Thread->Stack != NULL);
-
 
 	Thread->Name = Thread_Name;
 	//
@@ -538,9 +535,6 @@ VOID CleanupThread (PUTHREAD Thread) {
 
 #endif
 
-//
-//  handle, o nome, o estado e a taxa de ocupacao do stack. 
-//
 /*
 VOID UtDump() {
 	PLIST_ENTRY head = &AliveThreadList;
@@ -554,17 +548,38 @@ VOID UtDump() {
 }
 */
 
+//
+//  handle, o nome, o estado e a taxa de ocupacao do stack. 
+//
 VOID UtDump() {
 	Pnode_t head = &AliveThreadList;
 	for (Pnode_t curr = AliveThreadList.Fnode; curr != &AliveThreadList; curr = curr->Fnode)
 	{
-		char* name = curr->uThread->Name;
+		const char* name = curr->uThread->Name;
 		int status = curr->uThread->Status;
 		char * statusString = "";
 		if (status == READY) statusString = "READY";
 		else if (status == RUNNING) statusString = "RUNNING";
 		else if (status == BLOCKED) statusString = "BLOCKED";
-		printf("Thread Handle: %s, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", "/", name, statusString, "/");
+		printf("Thread Handle: %p, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", curr, name, statusString, "/");
 	}
 	printf("\n");
+}
+
+//
+// Espera passivamente pela terminação de todas as threads passados no array handle.
+//
+BOOL UtMultJoin(HANDLE handle[], int size) {
+	//Se o handle corresponder à thread invocante, a função retorna de imediato com o valor FALSE.
+	BOOL threadsFinished = FALSE;
+	for (int i = 0; i < size; i++)
+		if (((PUTHREAD)handle[i]) == RunningThread);
+
+	//Caso contrário, espera(usando uma e uma só transição de running->blocked) que todas as threads terminem, retornando nesse caso o valor TRUE.
+	UtDeactivate();
+
+	for (int i = 0; i < size; i++)
+		if (((PUTHREAD)handle[i])->Status != BLOCKED)
+			return FALSE;
+	return TRUE;
 }
