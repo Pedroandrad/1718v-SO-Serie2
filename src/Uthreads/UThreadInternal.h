@@ -56,12 +56,14 @@ typedef struct _UTHREAD_CONTEXT {
 typedef struct _UTHREAD {
 	PUTHREAD_CONTEXT ThreadContext;
 	LIST_ENTRY       Link;
+	LIST_ENTRY       AliveLink;
 	UT_FUNCTION      Function;
 	UT_ARGUMENT      Argument;
 	PUCHAR           Stack;
 	const char*		 Name;
 	size_t			 Stack_Size;
 	int				 Status;
+	BOOL			 toTerminate;
 } UTHREAD, *PUTHREAD;
 
 //

@@ -37,7 +37,7 @@ LIST_ENTRY ReadyQueue;
 // Sentinel of the list with every Thread being used
 //
 static
-node_t AliveThreadList;
+LIST_ENTRY AliveThreadList;
 
 //
 // The currently executing thread.
@@ -46,8 +46,6 @@ node_t AliveThreadList;
 static
 #endif
 PUTHREAD RunningThread;
-
-
 
 //
 // The user thread proxy of the underlying operating system thread. This
@@ -137,7 +135,7 @@ VOID Schedule () {
 //
 VOID UtInit() {
 	InitializeListHead(&ReadyQueue);
-	NodeInitializeListHead(&AliveThreadList);
+	InitializeListHead(&AliveThreadList);
 }
 
 //
@@ -331,9 +329,7 @@ HANDLE UtCreate(UT_FUNCTION Function, UT_ARGUMENT Argument, size_t Stack_Size, c
 	// Ready the thread.
 	//
 	NumberOfThreads += 1;
-	Pnode_t newNode = (Pnode_t) malloc(sizeof(node_t));
-	newNode->uThread = Thread;
-	NodeInsertTailList(&AliveThreadList, newNode);
+	InsertTailList(&AliveThreadList, &Thread->AliveLink);
 	UtActivate((HANDLE)Thread);
 	
 	return (HANDLE)Thread;
@@ -535,36 +531,23 @@ VOID CleanupThread (PUTHREAD Thread) {
 
 #endif
 
-/*
+
 VOID UtDump() {
 	PLIST_ENTRY head = &AliveThreadList;
 	for (PLIST_ENTRY curr = AliveThreadList.Flink; curr != &AliveThreadList; curr = curr->Flink)
 	{
-		char* name = CONTAINING_RECORD(curr, UTHREAD, Link)->Name;
-		int status = CONTAINING_RECORD(curr, UTHREAD, Link)->Status;
-		printf("Thread Handle: %s, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", "handle", name, status, "stack");
-	}
-	printf("\n");
-}
-*/
-
-//
-//  handle, o nome, o estado e a taxa de ocupacao do stack. 
-//
-VOID UtDump() {
-	Pnode_t head = &AliveThreadList;
-	for (Pnode_t curr = AliveThreadList.Fnode; curr != &AliveThreadList; curr = curr->Fnode)
-	{
-		const char* name = curr->uThread->Name;
-		int status = curr->uThread->Status;
+		PUTHREAD thread = CONTAINING_RECORD(curr, UTHREAD, AliveLink);
+		char* name = thread->Name;
+		int status = thread->Status;
 		char * statusString = "";
 		if (status == READY) statusString = "READY";
 		else if (status == RUNNING) statusString = "RUNNING";
 		else if (status == BLOCKED) statusString = "BLOCKED";
-		printf("Thread Handle: %p, Name: %s, Estado: %s, Taxa Ocupacao Stack: %s\n", curr, name, statusString, "/");
+		printf("Thread Handle: %d, Name: %s, Estado: %s, Taxa Ocupacao Stack: %d\n", thread->Argument, name, statusString, thread->Stack_Size);
 	}
 	printf("\n");
 }
+
 
 //
 // Espera passivamente pela terminação de todas as threads passados no array handle.
@@ -579,7 +562,7 @@ BOOL UtMultJoin(HANDLE handle[], int size) {
 	UtDeactivate();
 
 	for (int i = 0; i < size; i++)
-		if (((PUTHREAD)handle[i])->Status != BLOCKED)
+		if (((PUTHREAD)handle[i])->Status == (RUNNING || READY))
 			return FALSE;
 	return TRUE;
 }
