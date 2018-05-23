@@ -100,6 +100,14 @@ VOID UtDump();
 //
 BOOL UtMultJoin(HANDLE handle[], int size);
 
+//
+//
+//
+UTHREAD_API
+VOID UtTerminateThread(HANDLE tHandle);
+
+VOID time_test();
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

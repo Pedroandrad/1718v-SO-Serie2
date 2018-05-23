@@ -141,5 +141,7 @@ DWORD _tmain(DWORD argc, PTCHAR argv[]) {
 	printf("Press enter key to finish...\n");
 	getchar();
 
+	time_test();
+
 	return 0;
 }

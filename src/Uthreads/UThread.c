@@ -118,8 +118,19 @@ PUTHREAD ExtractNextReadyThread () {
 static
 FORCEINLINE
 VOID Schedule () {
+	UtDump();
 	PUTHREAD NextThread;
-    NextThread = ExtractNextReadyThread();
+	NextThread = ExtractNextReadyThread();
+	RunningThread->Status = READY;
+	while (TRUE) {
+		if (NextThread == NULL) return;
+		if (NextThread->toTerminate == TRUE) {
+			UtTerminateThread(NextThread);
+			NextThread = ExtractNextReadyThread();
+		}
+		else
+			break;
+	}
 	NextThread->Status = RUNNING;
 	ContextSwitch(RunningThread, NextThread);
 }
@@ -231,8 +242,14 @@ VOID UtDeactivate() {
 // becomes eligible to run.
 //
 VOID UtActivate (HANDLE ThreadHandle) {
-	((PUTHREAD)ThreadHandle)->Status = READY;
-	InsertTailList(&ReadyQueue, &((PUTHREAD)ThreadHandle)->Link);
+	if (((PUTHREAD)ThreadHandle)->toTerminate == TRUE) {
+		UtExit();
+	}
+	else {
+		((PUTHREAD)ThreadHandle)->Status = READY;
+		InsertTailList(&ReadyQueue, &((PUTHREAD)ThreadHandle)->Link);
+	}
+
 }
 
 ///////////////////////////////////////
@@ -269,6 +286,7 @@ HANDLE UtCreate(UT_FUNCTION Function, UT_ARGUMENT Argument, size_t Stack_Size, c
 	_ASSERTE(Thread != NULL && Thread->Stack != NULL);
 
 	Thread->Name = Thread_Name;
+	Thread->toTerminate = FALSE;
 	//
 	// Zero the stack for emotional confort.
 	//
@@ -565,4 +583,54 @@ BOOL UtMultJoin(HANDLE handle[], int size) {
 		if (((PUTHREAD)handle[i])->Status == (RUNNING || READY))
 			return FALSE;
 	return TRUE;
+}
+
+VOID UtTerminateThread(HANDLE tHandle) {
+	PUTHREAD thread = (PUTHREAD)tHandle;
+	//if (!UtAlive(tHandle)) return;
+	if (tHandle == UtSelf()) {
+		// terminar a thread running
+		UtExit();
+	}
+	else {
+		if (thread->Status == READY) {
+			// remover da lista ready e terminar
+			RemoveEntryList(&thread->Link);
+			UtExit();
+		}
+		else { // thread bloqueada, a terminar quando for desbloqueada
+			thread->toTerminate = TRUE;
+		}
+	}
+}
+
+static DWORD factor = 2000;
+
+VOID count_time(UT_ARGUMENT arg) {
+
+	for (DWORD i = 0; i < factor; i++) {
+		UtYield();
+	}
+}
+
+
+VOID time_test() {
+
+	DWORD start_time, end_time;
+
+	UtInit();
+
+	HANDLE handle_one = UtCreate(count_time, NULL, 0, "Thread_One");
+	HANDLE handle_two = UtCreate(count_time, NULL, 0, "Thread_Two");
+
+	start_time = GetTickCount();
+
+	UtRun();
+
+	end_time = GetTickCount();
+
+	DWORD elapsed_time = end_time - start_time;
+	DWORD total_time = elapsed_time / factor;
+	//print result
+	printf("time taken per content switch is: %d", total_time);
 }
