@@ -118,10 +118,8 @@ PUTHREAD ExtractNextReadyThread () {
 static
 FORCEINLINE
 VOID Schedule () {
-	UtDump();
 	PUTHREAD NextThread;
 	NextThread = ExtractNextReadyThread();
-	RunningThread->Status = READY;
 	while (TRUE) {
 		if (NextThread == NULL) return;
 		if (NextThread->toTerminate == TRUE) {
@@ -131,8 +129,11 @@ VOID Schedule () {
 		else
 			break;
 	}
+	if (RunningThread->Status == RUNNING)
+		RunningThread->Status = READY;
+
 	NextThread->Status = RUNNING;
-	ContextSwitch(RunningThread, NextThread);
+	ContextSwitch(RunningThread, NextThread); // quando se faz a segunda vez, morre aqui
 }
 
 ///////////////////////////////
@@ -204,7 +205,8 @@ VOID UtRun () {
 // resources are released after the context switch to the next ready thread.
 //
 VOID UtExit () {
-	NumberOfThreads -= 1;	
+	NumberOfThreads -= 1; 
+	RemoveEntryList(&RunningThread->AliveLink);
 	InternalExit(RunningThread, ExtractNextReadyThread());
 	_ASSERTE(!"Supposed to be here!");
 }
@@ -232,7 +234,7 @@ HANDLE UtSelf () {
 // Halts the execution of the current user thread.
 //
 VOID UtDeactivate() {
-	RunningThread->Status = BLOCKED;
+	RunningThread->Status = 2;
 	Schedule();
 }
 
@@ -551,7 +553,12 @@ VOID CleanupThread (PUTHREAD Thread) {
 
 
 VOID UtDump() {
-	PLIST_ENTRY head = &AliveThreadList;
+	
+	if (NumberOfThreads == 0) {
+		printf("No alive threads\n");
+		return;
+	}
+
 	for (PLIST_ENTRY curr = AliveThreadList.Flink; curr != &AliveThreadList; curr = curr->Flink)
 	{
 		PUTHREAD thread = CONTAINING_RECORD(curr, UTHREAD, AliveLink);
@@ -561,7 +568,7 @@ VOID UtDump() {
 		if (status == READY) statusString = "READY";
 		else if (status == RUNNING) statusString = "RUNNING";
 		else if (status == BLOCKED) statusString = "BLOCKED";
-		printf("Thread Handle: %d, Name: %s, Estado: %s, Taxa Ocupacao Stack: %d\n", thread->Argument, name, statusString, thread->Stack_Size);
+		printf("Thread Handle: %d, Name: %s, Estado: %s, Taxa Ocupacao Stack: %d\n", thread, name, statusString, thread->Stack_Size);
 	}
 	printf("\n");
 }
@@ -572,16 +579,18 @@ VOID UtDump() {
 //
 BOOL UtMultJoin(HANDLE handle[], int size) {
 	//Se o handle corresponder à thread invocante, a função retorna de imediato com o valor FALSE.
-	BOOL threadsFinished = FALSE;
-	for (int i = 0; i < size; i++)
-		if (((PUTHREAD)handle[i]) == RunningThread);
+	for (int i = 0; i < size; i++) {
+		if (((PUTHREAD)handle[i]) == RunningThread) {
+			for (; (i) > 0; i--)
+				RemoveTailList(handle[i - 1]);
+			return FALSE;
+		}
+		//InsertTailList(handle[i]->joinList, RunningThread->joinLink); ???? como fazzer join? como ficam as listas
+	}
 
 	//Caso contrário, espera(usando uma e uma só transição de running->blocked) que todas as threads terminem, retornando nesse caso o valor TRUE.
 	UtDeactivate();
 
-	for (int i = 0; i < size; i++)
-		if (((PUTHREAD)handle[i])->Status == (RUNNING || READY))
-			return FALSE;
 	return TRUE;
 }
 
@@ -602,35 +611,4 @@ VOID UtTerminateThread(HANDLE tHandle) {
 			thread->toTerminate = TRUE;
 		}
 	}
-}
-
-static DWORD factor = 2000;
-
-VOID count_time(UT_ARGUMENT arg) {
-
-	for (DWORD i = 0; i < factor; i++) {
-		UtYield();
-	}
-}
-
-
-VOID time_test() {
-
-	DWORD start_time, end_time;
-
-	UtInit();
-
-	HANDLE handle_one = UtCreate(count_time, NULL, 0, "Thread_One");
-	HANDLE handle_two = UtCreate(count_time, NULL, 0, "Thread_Two");
-
-	start_time = GetTickCount();
-
-	UtRun();
-
-	end_time = GetTickCount();
-
-	DWORD elapsed_time = end_time - start_time;
-	DWORD total_time = elapsed_time / factor;
-	//print result
-	printf("time taken per content switch is: %d", total_time);
 }

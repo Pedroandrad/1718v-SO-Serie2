@@ -54,3 +54,45 @@ BOOL TraverseDirTree(LPCSTR dir, LPCSTR extension, ACTION  action, LPVOID arg) {
 	FindClose(fileIter);
 	return TRUE;
 }
+
+BOOL myTraverse(LPCSTR dir, LPCSTR extension, ACTION  action, LPVOID arg, PLIST_ENTRY head)
+{
+	CHAR buffer[MAX_PATH];		// auxiliary buffer
+								// the buffer is needed to define a match string that guarantees 
+								// a priori selection for all files
+	sprintf_s(buffer, "%s\\%s", dir, "*.*");
+
+	WIN32_FIND_DATA fileData;
+	HANDLE fileIter = FindFirstFile(buffer, &fileData);
+	if (fileIter == INVALID_HANDLE_VALUE) return FALSE;
+
+	// Iterate through current directory and sub directories
+	do {
+		sprintf_s(buffer, "%s/%s", dir, fileData.cFileName);
+		if ((fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+			// Not processing "." and ".." files!
+			if (strcmp(fileData.cFileName, ".") && strcmp(fileData.cFileName, "..")) {
+				// Recursively process child directory
+				myTraverse(buffer, extension, action, arg, head);
+			}
+		}
+		else {
+			// Process only  archives with selected extension
+			if (hasExtension(buffer, extension))
+			{
+				//if (!action(buffer, arg)) break;
+				PInfo newInfo = (PInfo)malloc(sizeof(Info));
+				newInfo->action = action;
+				newInfo->arg = arg;
+				newInfo->dir = dir;
+				newInfo->extension = extension;
+				newInfo->buffer = buffer;
+
+				InsertTailList(head, &newInfo->Link);
+				//FAZER CONDICAO DE BREAK
+			}
+		}
+	} while (FindNextFile(fileIter, &fileData) == TRUE);
+
+	FindClose(fileIter);
+}

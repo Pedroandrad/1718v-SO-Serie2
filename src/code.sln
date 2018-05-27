@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BMPs_singlethread", "BMPs_s
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Uthreads", "Uthreads\Uthreads.vcxproj", "{81E1EF68-40B8-434B-91DA-F5611B414A1E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Talk", "Talk\Talk.vcxproj", "{8F6706D4-C5B6-419C-A364-220394D488A1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -29,6 +31,14 @@ Global
 		{81E1EF68-40B8-434B-91DA-F5611B414A1E}.Release|Win32.Build.0 = Release|Win32
 		{81E1EF68-40B8-434B-91DA-F5611B414A1E}.Release|x64.ActiveCfg = Release|x64
 		{81E1EF68-40B8-434B-91DA-F5611B414A1E}.Release|x64.Build.0 = Release|x64
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Debug|Win32.Build.0 = Debug|Win32
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Debug|x64.ActiveCfg = Debug|x64
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Debug|x64.Build.0 = Debug|x64
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Release|Win32.ActiveCfg = Release|Win32
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Release|Win32.Build.0 = Release|Win32
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Release|x64.ActiveCfg = Release|x64
+		{8F6706D4-C5B6-419C-A364-220394D488A1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

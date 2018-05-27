@@ -21,21 +21,6 @@
     <ClCompile Include="TestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LinkedList.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CountDownLatch.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Semaphore.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Event.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Mutex.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UThread.h">

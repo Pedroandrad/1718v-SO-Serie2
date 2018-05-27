@@ -1,8 +1,6 @@
-
 #include "../Include/app.h"
 #include "../Include/traversedir.h"
-
-
+#include <thread>
 
 // contexts for traverse folders
 
@@ -132,7 +130,7 @@ BOOL BMP_GetFlipsOfRefFile(LPCSTR filePath, LPVOID _ctx) {
 		//InsertRangeTailList(&newNode->files, &ctx.fileMatchingList);
 		InsertTailList(global->resultList, &newNode->link);
 	}
-terminate:
+	terminate:
 	// Cleanup file resources
 	FileMapClose(&refFileMap);
 	FileMapClose(&flipFileMap);
@@ -149,6 +147,94 @@ terminate:
  *		flipType	 - what transformation to match (FLIP_HORIZONTALLY or FLIP_VERTICALLY)
  *		res			 - sentinel node of result list
  */
+
+int ActiveThreads = 0;
+int MaxThreads = 0;
+
+typedef struct _data {
+	int threadNumber;
+	int sleepTime;
+} data, *Pdata;
+
+HANDLE threadEnd;
+HANDLE acknowledge;
+int threadsNum = 0;
+
+DWORD CALLBACK workerThread(LPVOID param) {
+	//Pdata data = (Pdata)param;
+
+	//printf("worker thread %d started : sleeptime = %d\n", data->threadNumber, data->sleepTime);
+	//Sleep(data->sleepTime);
+
+	printf("worker thread started\n");
+
+	PInfo info = (PInfo)param;
+	info->action(info->dir, info->arg);
+
+	SetEvent(threadEnd);
+	//printf("worker thread %d ended\n", data->threadNumber);
+	printf("worker thread done\n");
+
+	threadsNum = threadsNum - 1;
+	return 0;
+}
+
+void manager(PLIST_ENTRY workListHead) {
+
+	MaxThreads = std::thread::hardware_concurrency();
+
+	printf("%s, maximum threads: %d\n\n", "manager starting", MaxThreads);
+
+	int sleepTime = 1000;
+	//Pdata data;
+	PLIST_ENTRY curr = workListHead->Flink;
+
+	for (; curr != workListHead; curr = curr->Flink) {
+		printf("%d\n", threadsNum);
+		//data = (Pdata)malloc(sizeof(data));
+
+		sleepTime = (sleepTime == 1000 ? 3000 : 1000);
+
+		//data->sleepTime = sleepTime;
+		//data->threadNumber = i;
+
+		if (threadsNum >= MaxThreads) {
+			ResetEvent(threadEnd);
+			DWORD dwWaitResult = WaitForSingleObject(
+				threadEnd, // event handle
+				INFINITE);    // indefinite wait
+			switch (dwWaitResult)
+			{
+				// Event object was signaled
+			case WAIT_OBJECT_0:
+				//
+				// TODO: Read from the shared buffer
+				//
+				break;
+
+				// An error occurred
+			default:
+				printf("Wait error (%d)\n", GetLastError());
+				return;
+			}
+		}
+		PInfo info = CONTAINING_RECORD(workListHead->Flink, Info, Link);
+		
+		if (threadsNum <= MaxThreads) {
+			threadsNum = threadsNum + 1;
+			QueueUserWorkItem(workerThread, info, WT_EXECUTEDEFAULT);
+		}
+	}
+
+	while (threadsNum != 0) {
+		printf("%d\n", threadsNum);
+		Sleep(1000);
+	}
+
+	printf("done\n");
+	getchar();
+}
+
 INT BMP_GetFlipsOfFilesInRefDir(LPCSTR pathRefFiles, LPCSTR pathOutFiles, FLIP_enum_t flipType, PLIST_ENTRY res) {
 
 	MUTATIONS_RESULT_CTX ctx;
@@ -156,9 +242,19 @@ INT BMP_GetFlipsOfFilesInRefDir(LPCSTR pathRefFiles, LPCSTR pathOutFiles, FLIP_e
 
 	// Iterate through pathRefFiles directory and sub directories
 	// invoking de processor (BMP_GetFlipsOfRefFile) for each ref file
-	if (!TraverseDirTree(pathRefFiles, ".bmp", BMP_GetFlipsOfRefFile, &ctx)) {
+	LIST_ENTRY workListHead;
+	InitializeListHead(&workListHead);
+
+	//if (!TraverseDirTree(pathRefFiles, ".bmp", BMP_GetFlipsOfRefFile, &ctx)) {
+	if (!myTraverse(pathRefFiles, ".bmp", BMP_GetFlipsOfRefFile, &ctx, &workListHead)) {
 		if (!OperHasError(&ctx))
 			OperMarkError(&ctx, OPER_TRAVERSE_ERROR);
 	}
+
+	threadEnd = CreateEvent(NULL, FALSE, FALSE, "threadEnd");
+	acknowledge = CreateEvent(NULL, FALSE, FALSE, "acknowledge");
+
+	manager(&workListHead);
+
 	return ctx.errorCode;
 }

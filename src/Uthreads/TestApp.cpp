@@ -1,147 +1,170 @@
-/* Vários cliente; 1 servidor; Com semáforos e mutexes */
-#include <malloc.h>
 #include <Windows.h>
 #include <tchar.h>
 #include <stdio.h>
-#include "USynch.h"
 #include "UThread.h"
-#include "List.h"
 
+bool hasWork, hasAnswer;
+HANDLE utServer, utClient;
 
-typedef struct _queue {
-	LIST_ENTRY link;
-	SEMAPHORE itensAvailable;
-	SEMAPHORE itensSpace;
-	UTHREAD_MUTEX accessQueue;
-} QUEUE, *PQUEUE;
+BOOL serverStarted, clientStarted;
+BOOL end;
 
-typedef struct _queue_entry {
-	LIST_ENTRY link;
-	LONG value;
-	LONG answer;
-	EVENT haveAnswer;
-} QUEUE_ENTRY, *PQUEUE_ENTRY;
-
-QUEUE queue;
-#define MAX_QUEUE_ENTRIES	100
-
-VOID QueueInit(PQUEUE pqueue);
-VOID QueuePut(PQUEUE pqueue, PQUEUE_ENTRY pentry);
-PQUEUE_ENTRY QueueGet(PQUEUE pqueue);
-VOID QueueEntryInit(PQUEUE_ENTRY pentry);
-
-VOID QueueInit(PQUEUE pqueue) 
-{
-	UtInitializeMutex(&pqueue->accessQueue, false);
-	SemaphoreInit(&pqueue->itensAvailable, 0, MAX_QUEUE_ENTRIES);
-	SemaphoreInit(&pqueue->itensSpace, MAX_QUEUE_ENTRIES, MAX_QUEUE_ENTRIES);
-	InitializeListHead(&pqueue->link);
-}
-
-VOID QueuePut(PQUEUE pqueue, PQUEUE_ENTRY pentry) 
-{
-	SemaphoreAcquire(&pqueue->itensSpace, 1);
-	UtAcquireMutex(&pqueue->accessQueue);
-	InsertTailList(&pqueue->link, &pentry->link);
-	SemaphoreRelease(&pqueue->itensAvailable, 1);
-	UtReleaseMutex(&pqueue->accessQueue);
-}
-
-PQUEUE_ENTRY QueueGet(PQUEUE pqueue) 
-{
-	PQUEUE_ENTRY pentry;
-
-	SemaphoreAcquire(&pqueue->itensAvailable, 1);
-	UtAcquireMutex(&pqueue->accessQueue);
-	pentry = CONTAINING_RECORD(RemoveHeadList(&pqueue->link), QUEUE_ENTRY, link);
-	SemaphoreRelease(&pqueue->itensSpace, 1);
-	UtReleaseMutex(&pqueue->accessQueue);
-
-	return pentry;
-}
-
-VOID QueueEntryInit(PQUEUE_ENTRY pentry) {
-	EventInit(&pentry->haveAnswer, false);
-}
-
-LONG numbers[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-UTHREAD_COUNTER_LATCH clientsCounter;
-
-VOID Client(UT_ARGUMENT arg) {
-	DWORD id = (DWORD)arg;
-	PQUEUE_ENTRY pentry = (PQUEUE_ENTRY)malloc(sizeof(QUEUE_ENTRY));
-
-	QueueEntryInit(pentry); //
-
-	for (int i = 0; i < sizeof(numbers) / sizeof(numbers[0]); i++) {
-		UtDump();
-		pentry->value = numbers[i];
-
-		QueuePut(&queue, pentry);
-		EventWait(&pentry->haveAnswer);
-
-		printf("Client %d: fact(%d) = %d\n", id, numbers[i], pentry->answer);
+void Client(UT_ARGUMENT arg) {
+	printf("Client: begin\n");
+	UtDump();
+	clientStarted = true;
+	if (!serverStarted) {
+		printf("Client deactivate\n");
+		UtDeactivate(); 
 	}
-
-	free(pentry);
-
-	UtSignalCounterLatch(&clientsCounter);
+	UtDump();
+	hasWork = true;
+	hasAnswer = false;
+	printf("client: activate server\n");
+	UtActivate(utServer);
+	if (!hasAnswer) {
+		printf("Client deactivate\n");
+		UtDeactivate();
+	}
+	UtDump();
+	end = true;
+	hasWork = true;
+	printf("Client: activate server\n");
+	UtActivate(utServer);
+	UtDump();
 }
 
-long factorial(long n) {
-	long r = n;
-	if (n == 0) return 1;
-	while (--n > 1)
-		r *= n;
-	return r;
-}
-
-BOOL end = false;
-
-VOID Server(UT_ARGUMENT arg) {
+void Server(UT_ARGUMENT arg) {
+	printf("Server: begin\n");
+	UtDump();
+	serverStarted = true;
+	if (clientStarted) {
+		printf("Server: activate client\n");
+		UtActivate(utClient);
+	}
+	UtDump();
 	for (;;) {
-		PQUEUE_ENTRY pentry = QueueGet(&queue);
+		if (!hasWork) {
+			printf("Server deactivate\n");
+			UtDeactivate();
+		}
 		if (end)
 			break;
-		pentry->answer = factorial(pentry->value);
-		EventSet(&pentry->haveAnswer);
+		hasAnswer = true;
+		hasWork = false;
+		UtDump();
+		printf("Server: activate client\n");
+		UtActivate(utClient);
 	}
-	printf("Server: finishing\n");
 }
 
-QUEUE_ENTRY dummy;
-VOID Manager(UT_ARGUMENT arg) {
-	UtWaitCounterLatch(&clientsCounter);
-	printf("Manager: finishing\n");
-	end = true;
-	QueuePut(&queue, &dummy);
+BOOL status_test() {
+
+	hasWork = false;
+	hasAnswer = false;
+	serverStarted = false;
+	clientStarted = false;
+	end = false;
+
+	printf("begin\n");
+	UtInit();
+	UtDump();
+
+	utClient = UtCreate(Client, NULL, NULL, "Client");
+	utServer = UtCreate(Server, NULL, NULL, "Server");
+
+	UtRun();
+	printf("before UtEnd()\n");
+	UtDump();
+	UtEnd();
+	printf("after UtEnd()\n");
+	UtDump();
+
+	printf("end\nPress enter key to finish...\n");
+	getchar();
+
+	return 0;
 }
 
-#define MAX_CLIENTS 10
+BOOL multJoin_test() {
+	return false;
+}
 
-DWORD _tmain(DWORD argc, PTCHAR argv[]) {
-	int i;
+BOOL terminateThread_test() {
+	return false;
+}
+
+static DWORD factor = 2000;
+
+VOID count_time(UT_ARGUMENT arg) {
+
+	for (DWORD i = 0; i < factor; i++) {
+		UtYield();
+	}
+}
+
+VOID time_test() {
+
+	DWORD start_time, end_time;
 
 	UtInit();
 
-	UtInitCounterLatch(&clientsCounter, MAX_CLIENTS);
+	HANDLE handle_one = UtCreate(count_time, NULL, 0, "Thread_One");
+	HANDLE handle_two = UtCreate(count_time, NULL, 0, "Thread_Two");
 
-	QueueInit(&queue);
-
-	for (i = 0; i < MAX_CLIENTS; i++) {
-		UtCreate(Client, (UT_ARGUMENT)i, NULL, "Client");
-	}
-	UtCreate(Server, NULL, NULL, "Server");
-	UtCreate(Manager, NULL, NULL, "Manager");
+	start_time = GetTickCount();
 
 	UtRun();
 
-	UtEnd();
+	end_time = GetTickCount();
 
-	printf("Press enter key to finish...\n");
+	DWORD elapsed_time = end_time - start_time;
+	DWORD total_time = elapsed_time / factor;
+	//print result
+	printf("time taken per content switch is: %d", total_time);
 	getchar();
+}
 
-	time_test();
+VOID time2_test() {
+	return;
+}
+
+DWORD _tmain(DWORD argc, PTCHAR argv[]) {
+
+	printf(" 1 : status test\n");
+	printf(" 2 : multJoin test\n");
+	printf(" 3 : terminateThread test\n");
+	printf(" 4 : time test\n");
+	printf(" 5 : time2 test\n");
+	
+	char a = '1';
+
+	while (a != 6) 
+	{
+		printf("\nnext:");
+		int number = getchar();
+
+		switch (number - 48)
+		{
+		// status test
+		case 1: { status_test(); break; }
+		
+		// mult join test
+		case 2: { multJoin_test(); break; }
+		
+		// terminate thread test
+		case 3: { terminateThread_test(); break; }
+		
+		// tempo de comutação (context switch) de threads na biblioteca UThread
+		case 4: { time_test(); break; }
+
+		// tempo de comutação de threads no sistema operativo Windows
+		// tempo de comutação entre threads do mesmo processo e entre threads de processos distintos
+		case 5: { time2_test(); break; }
+		
+		case 6: return 0;
+		}
+	}
 
 	return 0;
 }

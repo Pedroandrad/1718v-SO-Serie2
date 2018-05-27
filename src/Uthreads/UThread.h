@@ -98,6 +98,7 @@ VOID UtDump();
 //
 // Espera passivamente pela terminação de todas as threads passados no array handle.
 //
+UTHREAD_API
 BOOL UtMultJoin(HANDLE handle[], int size);
 
 //
@@ -105,8 +106,6 @@ BOOL UtMultJoin(HANDLE handle[], int size);
 //
 UTHREAD_API
 VOID UtTerminateThread(HANDLE tHandle);
-
-VOID time_test();
 
 #ifdef __cplusplus
 } // extern "C"
