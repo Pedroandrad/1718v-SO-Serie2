@@ -112,6 +112,14 @@ PUTHREAD ExtractNextReadyThread () {
 		 : CONTAINING_RECORD(RemoveHeadList(&ReadyQueue), UTHREAD, Link);
 }
 
+void terminate(HANDLE ThreadHandle) {
+	NumberOfThreads--;
+	PUTHREAD Thread = (PUTHREAD)ThreadHandle;
+	RemoveEntryList(&Thread->AliveLink);
+	free(Thread->Stack);
+	free(Thread);
+}
+
 //
 // Schedule a new thread to run
 //
@@ -234,7 +242,7 @@ HANDLE UtSelf () {
 // Halts the execution of the current user thread.
 //
 VOID UtDeactivate() {
-	RunningThread->Status = 2;
+	RunningThread->Status = BLOCKED;
 	Schedule();
 }
 
@@ -244,14 +252,13 @@ VOID UtDeactivate() {
 // becomes eligible to run.
 //
 VOID UtActivate (HANDLE ThreadHandle) {
-	if (((PUTHREAD)ThreadHandle)->toTerminate == TRUE) {
-		UtExit();
-	}
+	PUTHREAD Thread = (PUTHREAD)ThreadHandle;
+	if (((PUTHREAD)ThreadHandle)->toTerminate == TRUE)
+		terminate(ThreadHandle);
 	else {
 		((PUTHREAD)ThreadHandle)->Status = READY;
 		InsertTailList(&ReadyQueue, &((PUTHREAD)ThreadHandle)->Link);
 	}
-
 }
 
 ///////////////////////////////////////
@@ -596,18 +603,18 @@ BOOL UtMultJoin(HANDLE handle[], int size) {
 
 VOID UtTerminateThread(HANDLE tHandle) {
 	PUTHREAD thread = (PUTHREAD)tHandle;
-	//if (!UtAlive(tHandle)) return;
+
 	if (tHandle == UtSelf()) {
-		// terminar a thread running
+		// terminar a thread a correr
 		UtExit();
 	}
 	else {
 		if (thread->Status == READY) {
 			// remover da lista ready e terminar
 			RemoveEntryList(&thread->Link);
-			UtExit();
+			terminate(tHandle);
 		}
-		else { // thread bloqueada, a terminar quando for desbloqueada
+		else { // thread bloqueada, terminar quando for ativada
 			thread->toTerminate = TRUE;
 		}
 	}
