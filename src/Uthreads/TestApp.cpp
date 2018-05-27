@@ -168,8 +168,8 @@ VOID time_test() {
 
 	UtEnd();
 
-	DWORD elapsed_time = end_time - start_time;
-	DWORD total_time = elapsed_time / factor;
+	FLOAT elapsed_time = end_time - start_time;
+	FLOAT total_time = elapsed_time / factor;
 	//print result
 	printf("time taken per content switch is: %d", total_time);
 	getchar();
